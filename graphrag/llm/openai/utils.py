@@ -150,11 +150,24 @@ def try_parse_json_object(input: str) -> tuple[str, dict]:
 def get_sleep_time_from_error(e: Any) -> float:
     """Extract the sleep time value from a RateLimitError. This is usually only available in Azure."""
     sleep_time = 0.0
-    if isinstance(e, RateLimitError) and _please_retry_after in str(e):
-        # could be second or seconds
-        sleep_time = int(str(e).split(_please_retry_after)[1].split(" second")[0])
+    retry_after_phrases = [
+        _please_retry_after,
+        _try_again_in,
+    ]
+    
+    if isinstance(e, RateLimitError):
+        message = str(e)
+        for phrase in retry_after_phrases:
+            if phrase in message:
+                try:
+                    sleep_time = float(message.split(phrase)[1].split(" second")[0])
+                    break
+                except (IndexError, ValueError):
+                    pass
 
     return sleep_time
 
 
+
 _please_retry_after = "Please retry after "
+_try_again_in = "Try again in"
